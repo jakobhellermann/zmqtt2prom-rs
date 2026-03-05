@@ -59,7 +59,7 @@ pub struct Args {
     pub mqtt_password: Option<String>,
 
     /// HTTP server port for metrics endpoint
-    #[arg(long, env = "Z2P_HTTP_PORT", default_value = "8080", value_parser = parse_port)]
+    #[arg(long, env = "Z2P_HTTP_PORT", default_value = "6565", value_parser = parse_port)]
     pub http_port: u16,
 
     /// Log level (trace, debug, info, warn, error)
@@ -102,7 +102,7 @@ mod tests {
         let args = Args::parse_from(["zmqtt2prom"]);
         assert_eq!(args.mqtt_host, "localhost");
         assert_eq!(args.mqtt_port, 1883);
-        assert_eq!(args.http_port, 8080);
+        assert_eq!(args.http_port, 6565);
         assert!(args.mqtt_username.is_none());
         assert!(args.mqtt_password.is_none());
     }

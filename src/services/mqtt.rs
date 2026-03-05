@@ -87,6 +87,7 @@ impl MqttService {
         let mut mqtt_options = MqttOptions::new(&client_id, &self.config.host, self.config.port);
         mqtt_options.set_keep_alive(Duration::from_secs(30));
         mqtt_options.set_clean_session(true);
+        mqtt_options.set_max_packet_size(256 * 1024, 256 * 1024); // 256KB for incoming and outgoing
 
         if let (Some(username), Some(password)) = (&self.config.username, &self.config.password) {
             mqtt_options.set_credentials(username, password);

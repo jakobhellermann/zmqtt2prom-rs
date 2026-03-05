@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use axum::{Router, extract::State, routing::get};
+use axum::{Router, extract::State, http::StatusCode, routing::get};
 use clap::Parser;
 use tokio::sync::{RwLock, watch};
 use tracing::info;
-use tracing_subscriber::filter::LevelFilter;
+use tracing_subscriber::EnvFilter;
 
 mod cli;
 mod models;
@@ -21,8 +21,11 @@ struct AppState {
 }
 
 /// GET /metrics - Return Prometheus metrics.
-async fn metrics_handler(State(state): State<Arc<AppState>>) -> String {
-    state.metrics_manager.render()
+async fn metrics_handler(State(state): State<Arc<AppState>>) -> Result<String, StatusCode> {
+    state
+        .metrics_manager
+        .render()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 /// GET /health - Health check endpoint.
@@ -34,10 +37,10 @@ async fn health_handler() -> &'static str {
 async fn main() {
     let args = Args::parse();
 
-    // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(LevelFilter::from_level(args.log_level))
-        .init();
+    // Initialize logging - RUST_LOG takes precedence over --log-level
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(args.log_level.as_str()));
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     info!("Starting zmqtt2prom");
 

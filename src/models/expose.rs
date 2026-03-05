@@ -49,6 +49,7 @@ impl BinaryValue {
 }
 
 /// Represents a device capability/expose from Zigbee2MQTT.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
 pub struct Expose {
     #[serde(rename = "type")]
@@ -116,17 +117,17 @@ fn flatten_exposes_recursive(exposes: &[Expose], prefix: &str, result: &mut Vec<
             None => prefix.to_string(),
         };
 
-        if expose.expose_type.is_generic() {
-            if expose.has_publish_access() {
-                result.push(FlattenedExpose {
-                    property,
-                    expose_type: expose.expose_type.clone(),
-                    unit: expose.unit.clone(),
-                    value_on: expose.value_on.clone(),
-                    value_off: expose.value_off.clone(),
-                });
-            }
-        } else if let Some(features) = &expose.features {
+        if expose.is_monitorable() {
+            result.push(FlattenedExpose {
+                property: property.clone(),
+                expose_type: expose.expose_type.clone(),
+                unit: expose.unit.clone(),
+                value_on: expose.value_on.clone(),
+                value_off: expose.value_off.clone(),
+            });
+        }
+
+        if let Some(features) = &expose.features {
             // Composite type - recurse into features
             flatten_exposes_recursive(features, &property, result);
         }

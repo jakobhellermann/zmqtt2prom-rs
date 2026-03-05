@@ -59,7 +59,7 @@ pub struct Args {
     pub mqtt_password: Option<String>,
 
     /// HTTP server port for metrics endpoint
-    #[arg(long, default_value = "8080", value_parser = parse_port)]
+    #[arg(long, env = "Z2P_HTTP_PORT", default_value = "8080", value_parser = parse_port)]
     pub http_port: u16,
 
     /// Log level (trace, debug, info, warn, error)

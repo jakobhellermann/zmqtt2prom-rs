@@ -168,14 +168,14 @@ impl MetricsManager {
     }
 
     /// Render metrics in Prometheus text format.
-    pub fn render(&self) -> String {
+    pub fn render(&self) -> Result<String, std::fmt::Error> {
         let encoder = TextEncoder::new();
         let metric_families = self.registry.gather();
         let mut buffer = Vec::with_capacity(20 * 1024);
         encoder
             .encode(&metric_families, &mut buffer)
-            .expect("Failed to encode metrics");
-        String::from_utf8(buffer).expect("Metrics are not valid UTF-8")
+            .map_err(|_| std::fmt::Error)?;
+        String::from_utf8(buffer).map_err(|_| std::fmt::Error)
     }
 }
 
@@ -232,7 +232,7 @@ mod tests {
         let payload = br#"{"temperature": 25.5}"#;
         manager.process_payload("test_sensor", payload).await;
 
-        let metrics = manager.render();
+        let metrics = manager.render().unwrap();
         assert!(metrics.contains("mqtt2prom_gauge"));
         assert!(metrics.contains("temperature"));
         assert!(metrics.contains("25.5"));
@@ -246,7 +246,7 @@ mod tests {
         let payload = br#"{"state": "ON"}"#;
         manager.process_payload("test_sensor", payload).await;
 
-        let metrics = manager.render();
+        let metrics = manager.render().unwrap();
         assert!(metrics.contains("mqtt2prom_gauge"));
         assert!(metrics.contains("state"));
     }
@@ -260,7 +260,7 @@ mod tests {
         manager.process_payload("test_sensor", payload).await;
 
         // Should not create a metric for null value
-        let metrics = manager.render();
+        let metrics = manager.render().unwrap();
         // The gauge should be registered but empty
         assert!(!metrics.contains("25.5"));
     }
@@ -298,7 +298,7 @@ mod tests {
         let payload = br#"{"color": {"x": 0.3}}"#;
         manager.process_payload("nested_sensor", payload).await;
 
-        let metrics = manager.render();
+        let metrics = manager.render().unwrap();
         assert!(metrics.contains("color_x"));
         assert!(metrics.contains("0.3"));
     }

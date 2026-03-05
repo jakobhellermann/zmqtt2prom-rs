@@ -3,6 +3,7 @@ use serde::Deserialize;
 use super::expose::{Expose, FlattenedExpose, flatten_exposes};
 
 /// Device definition containing model info and exposes.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
 pub struct DeviceDefinition {
     pub description: Option<String>,
@@ -12,6 +13,7 @@ pub struct DeviceDefinition {
 }
 
 /// A Zigbee device discovered from Zigbee2MQTT.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
 pub struct Device {
     pub disabled: Option<bool>,

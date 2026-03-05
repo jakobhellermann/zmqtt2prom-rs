@@ -66,6 +66,11 @@
           zmqtt2prom-rs = zmqtt2prom-rs;
         };
 
+        apps.default = {
+          type = "app";
+          program = "${zmqtt2prom-rs}/bin/zmqtt2prom";
+        };
+
         checks = {
           inherit zmqtt2prom-rs zmqtt2prom-rs-clippy zmqtt2prom-rs-test;
         };

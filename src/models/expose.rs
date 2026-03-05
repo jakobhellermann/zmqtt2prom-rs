@@ -106,15 +106,17 @@ pub fn flatten_exposes(exposes: &[Expose]) -> Vec<FlattenedExpose> {
 
 fn flatten_exposes_recursive(exposes: &[Expose], prefix: &str, result: &mut Vec<FlattenedExpose>) {
     for expose in exposes {
-        let property = match &expose.property {
-            Some(p) => {
-                if prefix.is_empty() {
-                    p.clone()
-                } else {
-                    format!("{}_{}", prefix, p)
-                }
-            }
-            None => prefix.to_string(),
+        let base_path = if prefix.is_empty() {
+            String::new()
+        } else {
+            format!("{}_", prefix)
+        };
+        let property = if let Some(p) = &expose.property {
+            format!("{}{}", base_path, p)
+        } else if let Some(n) = &expose.name {
+            format!("{}{}", base_path, n)
+        } else {
+            format!("{}unknown", base_path)
         };
 
         if expose.is_monitorable() {
@@ -298,5 +300,139 @@ mod tests {
         assert_eq!(flattened.len(), 2);
         assert_eq!(flattened[0].property, "color_xy_x");
         assert_eq!(flattened[1].property, "color_xy_y");
+    }
+
+    #[test]
+    fn test_flatten_exposes_generic_with_features() {
+        // Edge case: a generic expose that also has features
+        // Both the parent and children should be included
+        let exposes = vec![Expose {
+            expose_type: ExposeType::Numeric,
+            property: Some("brightness".to_string()),
+            name: None,
+            unit: Some("%".to_string()),
+            access: Some(7),
+            category: None,
+            description: None,
+            features: Some(vec![Expose {
+                expose_type: ExposeType::Numeric,
+                property: Some("transition".to_string()),
+                name: None,
+                unit: Some("s".to_string()),
+                access: Some(7),
+                category: None,
+                description: None,
+                features: None,
+                value_on: None,
+                value_off: None,
+                value_min: None,
+                value_max: None,
+                value_step: None,
+                values: None,
+            }]),
+            value_on: None,
+            value_off: None,
+            value_min: None,
+            value_max: None,
+            value_step: None,
+            values: None,
+        }];
+
+        let flattened = flatten_exposes(&exposes);
+        assert_eq!(flattened.len(), 2);
+        assert_eq!(flattened[0].property, "brightness");
+        assert_eq!(flattened[0].unit, Some("%".to_string()));
+        assert_eq!(flattened[1].property, "brightness_transition");
+        assert_eq!(flattened[1].unit, Some("s".to_string()));
+    }
+
+    #[test]
+    fn test_flatten_exposes_name_fallback() {
+        // When property is None, should fall back to name
+        let exposes = vec![Expose {
+            expose_type: ExposeType::Numeric,
+            property: None,
+            name: Some("temperature".to_string()),
+            unit: Some("°C".to_string()),
+            access: Some(1),
+            category: None,
+            description: None,
+            features: None,
+            value_on: None,
+            value_off: None,
+            value_min: None,
+            value_max: None,
+            value_step: None,
+            values: None,
+        }];
+
+        let flattened = flatten_exposes(&exposes);
+        assert_eq!(flattened.len(), 1);
+        assert_eq!(flattened[0].property, "temperature");
+    }
+
+    #[test]
+    fn test_flatten_exposes_unknown_fallback() {
+        // When both property and name are None, should use "unknown"
+        let exposes = vec![Expose {
+            expose_type: ExposeType::Numeric,
+            property: None,
+            name: None,
+            unit: Some("°C".to_string()),
+            access: Some(1),
+            category: None,
+            description: None,
+            features: None,
+            value_on: None,
+            value_off: None,
+            value_min: None,
+            value_max: None,
+            value_step: None,
+            values: None,
+        }];
+
+        let flattened = flatten_exposes(&exposes);
+        assert_eq!(flattened.len(), 1);
+        assert_eq!(flattened[0].property, "unknown");
+    }
+
+    #[test]
+    fn test_flatten_exposes_nested_name_fallback() {
+        // Nested expose with name fallback should include parent prefix
+        let exposes = vec![Expose {
+            expose_type: ExposeType::Composite,
+            property: Some("sensor".to_string()),
+            name: None,
+            unit: None,
+            access: Some(7),
+            category: None,
+            description: None,
+            features: Some(vec![Expose {
+                expose_type: ExposeType::Numeric,
+                property: None,
+                name: Some("reading".to_string()),
+                unit: None,
+                access: Some(1),
+                category: None,
+                description: None,
+                features: None,
+                value_on: None,
+                value_off: None,
+                value_min: None,
+                value_max: None,
+                value_step: None,
+                values: None,
+            }]),
+            value_on: None,
+            value_off: None,
+            value_min: None,
+            value_max: None,
+            value_step: None,
+            values: None,
+        }];
+
+        let flattened = flatten_exposes(&exposes);
+        assert_eq!(flattened.len(), 1);
+        assert_eq!(flattened[0].property, "sensor_reading");
     }
 }

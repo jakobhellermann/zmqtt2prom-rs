@@ -154,20 +154,45 @@ impl MqttService {
             }
         };
 
-        let eligible_devices: Vec<_> = devices.into_iter().filter(|d| d.is_eligible()).collect();
-
-        info!("Discovered {} eligible devices", eligible_devices.len());
+        info!("Parsed {} total devices", devices.len());
 
         let mut registry = self.device_registry.write().await;
         registry.clear();
 
-        for device in eligible_devices {
+        for device in devices {
+            if !device.is_eligible() {
+                warn!(
+                    "Filtering out device {}: supported={:?}, disabled={:?}, interview_completed={:?}",
+                    device.friendly_name,
+                    device.supported,
+                    device.disabled,
+                    device.interview_completed
+                );
+                continue;
+            }
+
+            if device.definition.is_none() {
+                warn!(
+                    "Device {} has no definition, skipping",
+                    device.friendly_name
+                );
+                continue;
+            }
+
             let friendly_name = device.friendly_name.clone();
             let topic = device.mqtt_topic();
             let device_info = DeviceInfo::new(device);
 
-            debug!(
-                "Device {}: {} exposes",
+            if device_info.exposes.is_empty() {
+                warn!(
+                    "Device {} has no monitorable exposes, skipping",
+                    friendly_name
+                );
+                continue;
+            }
+
+            info!(
+                "Registered device {} with {} exposes",
                 friendly_name,
                 device_info.exposes.len()
             );
@@ -179,6 +204,17 @@ impl MqttService {
                 warn!("Failed to subscribe to {}: {}", topic, e);
             } else {
                 debug!("Subscribed to {}", topic);
+            }
+        }
+
+        info!(
+            "Device discovery complete. Monitoring {} devices:",
+            registry.len()
+        );
+        for (name, info) in registry.iter() {
+            info!("\t - {}", name);
+            for expose in &info.exposes {
+                info!("\t\t - {} {:?}", expose.property, expose.expose_type);
             }
         }
     }
